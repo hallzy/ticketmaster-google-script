@@ -4,7 +4,7 @@
 var spreadsheet_id = ""
 var ticketmaster_api_token = ""
 var debug = false
-var auto_update_check = true;
+var auto_update_check = false;
 var branch_to_check_for_updates = "master";
 var github_api_token = ""
 
