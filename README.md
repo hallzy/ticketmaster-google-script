@@ -67,9 +67,14 @@ Country codes are
 [ISO Alpha-2 Codes](https://en.wikipedia.org/wiki/ISO_3166-1#Officially_assigned_code_elements)
 (Make sure to check the `Alpha-2 code` column in the chart).
 
-I am not sure how the State Codes are determined for the script. I do know that
-for Canada and the USA it is the 2 character abbreviations that we have for our
-Provinces/States.
+I am not sure how the State Codes are determined for the script (the codes are
+defined by the Ticketmaster API, not by me). I do know that for Canada and the
+USA it is the 2 character abbreviations that we have for our Provinces/States.
+Examples:
+* `BC` = British Columbia
+* `AB` = Alberta
+* `ON` = Ontario
+* etc
 
 **Please note that at this time the script does require both a
 State and Country Code. If there is a request to make that optional I will look
