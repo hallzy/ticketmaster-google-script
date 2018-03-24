@@ -3,13 +3,11 @@
 // Change these variables variable
 var spreadsheet_id = ""
 var api_key = ""
-//var get_status_change_alert = true
 var debug = true
 
 
 
 var TESTING = false;
-
 var events_to_email = new Array();
 
 // Email Related classes and functions//{{{
@@ -61,8 +59,10 @@ function email_alert_for_added_events() {
   }
 
 }
+//}}}
 
-// Retrive sthe number of episodes for a tv show from the API
+// Retrieves the number of occurrences of an event that exist in the given
+// location based on the API
 function get_number_of_events(api) {
   var num = api['_embedded']['events'].length;
   Logger.log("Number of events: " + num);
@@ -70,19 +70,20 @@ function get_number_of_events(api) {
 }
 
 function getEventURL(event) {
-  var url = "https://app.ticketmaster.com/discovery/v2/events.json?countryCode=" + event.country +
-            "&stateCode=" + event.state +
-            "&keyword=" + event.keyword +
-            "&apikey=" + api_key;
+  var url = "https://app.ticketmaster.com/discovery/v2/events.json?" +
+            "countryCode=" + event.country +
+            "&stateCode="  + event.state   +
+            "&keyword="    + event.keyword +
+            "&apikey="     + api_key;
 
   Logger.log("URL: " + url);
   return url;
 }
 
 function getResponse(event) {
-  // get the api url for the current show
+  // get the API URL for the current event and location
   var url = getEventURL(event);
-  // remove whitespace from the end of the url
+  // remove white space from the end of the URL
   url = url.replace(/^\s+|\s+$/g, '');
 
   // If we fail to get a response, send off some logs and exit
@@ -153,28 +154,26 @@ function GoogleSheet() {
 function Event(index, sheet) {
   this.keyword = sheet.getKeyword(index);
   this.index = index;
-  this.country = undefined
-  this.state = undefined
+  this.country = sheet.getCountryCode(k)
+  this.state = sheet.getStateCode(k)
 }
 
 function run() {
-  // Get the google sheet with tv show data
+  // Get the google sheet with event data
   var sheet = new GoogleSheet();
 
   // Iterate through every event
   for (k = 0; k < sheet.getLastRow - 1; k++) {
-    var currentshow_index = k;
+    var current_event_idx = k;
 
     if (sheet.isCountryBlank(k) || sheet.isStateBlank(k)) {
       break;
     }
-    // Repopulate the sheet after adding emailed shows to the sheet. Also,
-    // execute this when we come back through the loop for rechecking shows.
+    // Repopulate the sheet after adding emailed events to the sheet. Also,
+    // execute this when we come back through the loop for rechecking events.
     sheet.Update();
 
     var event = new Event(k, sheet);
-    event.country = sheet.getCountryCode(k)
-    event.state = sheet.getStateCode(k)
     Logger.log("==============================");
     Logger.log("Event Name: " + event.keyword);
     Logger.log("Event Locations: " + event.state + ", " + event.country)
@@ -196,18 +195,23 @@ function run() {
     var api_num_events = get_number_of_events(api);
 
     if (api_num_events < sheet_num_events) {
-      // If we know of more events than what exist, the older shows have probably now
-      //happened, so set the sheet number to the api number and continue
+      // If we know of more events than what exist, the older events have
+      // probably now happened, so set the sheet number to the API number and
+      // continue
       sheet.setNumberOfEvents(api_num_events);
 
       continue;
     }
 
-    // If there are more events now than what there was before, add that event to the email
+    // If there are more events now than what there was before, add that event
+    // to the email
     Logger.log("Number of events shown in the sheet: " + sheet_num_events)
     if (api_num_events > sheet_num_events || sheet_num_events == undefined) {
       sheet.setNumberOfEvents(k, api_num_events);
-      events_to_email.push(event.keyword + " has a new show in " + event.state + ", " + event.country);
+      events_to_email.push(event.keyword +
+                           " has a new show in " +
+                           event.state + ", " +
+                           event.country);
       for (var api_event in api_events) {
         var name = "";
         var location = "";
@@ -217,13 +221,18 @@ function run() {
           var name = api_events[api_event]['name'];
         }
         if('_embedded' in api_events[api_event]) {
-          if ('venues' in api_events[api_event]['_embedded']) {
-            if ('city' in api_events[api_event]['_embedded']['venues'][0] &&
-                'state' in api_events[api_event]['_embedded']['venues'][0]) {
-              if ('name' in api_events[api_event]['_embedded']['venues'][0]['city'] &&
-                  'name' in api_events[api_event]['_embedded']['venues'][0]['state']) {
-                var location = api_events[api_event]['_embedded']['venues'][0]['city']['name'] + ", " +
-                               api_events[api_event]['_embedded']['venues'][0]['state']['name']
+          var this_event = api_events[api_event]
+          if ('venues' in this_event['_embedded']) {
+            var this_event = this_event['embedded']
+            if ('city' in this_event['venues'][0] &&
+                'state' in this_event['venues'][0]) {
+              var this_event = this_event['venues'][0]
+              if ('name' in this_event['city'] &&
+                  'name' in this_event['state']) {
+                var this_event_city = this_event['city']
+                var this_event_state = this_event['state']
+                var location = this_event_city['name'] + ", " +
+                               this_event_state['name']
               }
             }
           }
