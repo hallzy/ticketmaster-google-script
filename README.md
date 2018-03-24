@@ -191,23 +191,6 @@ with the quotes included.
 This is essential in order to get the script to work.
 
 
-### var debug (OPTIONAL)
-
-This variable tells the script if you want to get emailed log reports.
-
-#### Default
-
-The default setting is `false`.
-
-#### Possible Values:
-
-`var debug = true` means that you want to get emails with the logs for
-every execution of the script.
-
-`var debug = false` means that you do NOT want to get emails with the logs
-at all.
-
-
 ### var ticketmaster_api_token (REQUIRED)
 
 This is the token that we created earlier. If you missed that part then please
