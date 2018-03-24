@@ -2,8 +2,11 @@
 // URL = https://docs.google.com/spreadsheets/d/1RSklW9SKI535TG0LnH9cjU2c3spLtnbPBAKWahUWO7I/edit#gid=0
 // Change these variables variable
 var spreadsheet_id = ""
-var api_key = ""
-var debug = true
+var ticketmaster_api_token = ""
+var debug = false
+var auto_update_check = true;
+var branch_to_check_for_updates = "master";
+var github_api_token = ""
 
 
 
@@ -59,6 +62,20 @@ function email_alert_for_added_events() {
   }
 
 }
+
+function email_alert_for_script_update(newhash, oldhash) {
+  var body = "An update has been made to the script.";
+  body = body + "\n\n";
+  body = body + "Check \"https://github.com/hallzy/ticketmaster-google-script\"";
+  body = body + "\n\n";
+  body = body + "The last time an update check was made the current commit ";
+  body = body + "hash was \"" + oldhash + "\"";
+  body = body + "\n\n";
+  body = body + "Now the current hash is \"" + newhash + "\"";
+  var subject = "Automated Message: Ticketmaster Script Ready for Update"
+  var e = new Email(subject, body);
+  e.Send();
+}
 //}}}
 
 // Retrieves the number of occurrences of an event that exist in the given
@@ -74,7 +91,7 @@ function getEventURL(event) {
             "countryCode=" + event.country +
             "&stateCode="  + event.state   +
             "&keyword="    + event.keyword +
-            "&apikey="     + api_key;
+            "&apikey="     + ticketmaster_api_token;
 
   Logger.log("URL: " + url);
   return url;
@@ -107,6 +124,65 @@ function getResponse(event) {
     throw err;
   }
   return response;
+}
+
+function check_for_updates(sheet) {
+  // Get the URL to check. This will be the Github page with the list of commits
+  // for the specified branch
+  var url = "https://api.github.com/repos/hallzy/ticketmaster-google-script/commits/"
+  url = url + branch_to_check_for_updates;
+
+  // If an API token has been specified then use it, otherwise, don't.
+  if (github_api_token !== "") {
+    url = url + "?access_token="
+    url = url + github_api_token
+  }
+  Logger.log("API URL = " + url)
+
+  // Get the page as a string
+  try {
+    var newhash = UrlFetchApp.fetch(url).getContentText()
+  }
+  catch(e) {
+    Logger.log("Github API Error. No commit found.")
+    email_error(e)
+    throw e
+  }
+
+  try {
+    newhash = JSON.parse(newhash)
+  }
+  catch(e) {
+    Logger.log("Failed to Parse \"newhash\"")
+    email_error(e)
+    throw e
+  }
+
+  try {
+    newhash = newhash["sha"]
+  }
+  catch(e) {
+    Logger.log("No hash in JSON")
+    email_error(e)
+    throw e
+  }
+  Logger.log(newhash)
+
+  var oldhash;
+  // Get the previously saved hash from the sheet
+  if (sheet.isVersionHashBlank()) {
+    Logger.log("hash is initialized to: " + newhash);
+    sheet.setVersionHash(newhash)
+  }
+  else {
+    oldhash = sheet.getVersionHash()
+    if (newhash != oldhash) {
+      Logger.log("hash is now: " + newhash);
+      email_alert_for_script_update(newhash, oldhash);
+      sheet.setVersionHash(newhash)
+    }
+  }
+  Logger.log("Old hash is: " + oldhash);
 }
 
 // Google Sheet Class//{{{
@@ -143,6 +219,18 @@ function GoogleSheet() {
     return this.base.getRange(index+2, 3).isBlank();
   };
 
+  this.getVersionHash = function() {
+    return this.getData[0][6]
+  };
+
+  this.isVersionHashBlank = function() {
+    return this.base.getRange(1, 7).isBlank();
+  };
+
+  this.setVersionHash = function(hash) {
+    this.base.getRange(1, 7).setValue(hash);
+  };
+
   this.Update = function() {
     this.base       = SpreadsheetApp.openById(spreadsheet_id).getSheets()[0];
     this.getData    = this.base.getDataRange().getValues();
@@ -161,6 +249,10 @@ function Event(index, sheet) {
 function run() {
   // Get the google sheet with event data
   var sheet = new GoogleSheet();
+
+  if (auto_update_check == true) {
+    check_for_updates(sheet);
+  }
 
   // Iterate through every event
   for (k = 0; k < sheet.getLastRow - 1; k++) {
