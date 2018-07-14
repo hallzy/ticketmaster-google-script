@@ -315,7 +315,7 @@ function run() {
         if('_embedded' in api_events[api_event]) {
           var this_event = api_events[api_event]
           if ('venues' in this_event['_embedded']) {
-            var this_event = this_event['embedded']
+            var this_event = this_event['_embedded']
             if ('city' in this_event['venues'][0] &&
                 'state' in this_event['venues'][0]) {
               var this_event = this_event['venues'][0]
