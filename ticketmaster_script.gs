@@ -291,76 +291,64 @@ function run() {
       // probably now happened, so set the sheet number to the API number and
       // continue
       sheet.setNumberOfEvents(api_num_events);
-
       continue;
     }
 
-    // If there are more events now than what there was before, add that event
-    // to the email
     Logger.log("Number of events shown in the sheet: " + sheet_num_events)
-    if (api_num_events > sheet_num_events || sheet_num_events == undefined) {
-      sheet.setNumberOfEvents(k, api_num_events);
-      events_to_email.push(event.keyword +
-                           " has a new show in " +
-                           event.state + ", " +
-                           event.country);
-      for (var api_event in api_events) {
-        var name = "";
-        var location = "";
-        var date = "";
-        var url = "";
-        if ('name' in api_events[api_event]) {
-          var name = api_events[api_event]['name'];
-        }
-        if('_embedded' in api_events[api_event]) {
-          var this_event = api_events[api_event]
-          if ('venues' in this_event['_embedded']) {
-            var this_event = this_event['_embedded']
-            if ('city' in this_event['venues'][0] &&
-                'state' in this_event['venues'][0]) {
-              var this_event = this_event['venues'][0]
-              if ('name' in this_event['city'] &&
-                  'name' in this_event['state']) {
-                var this_event_city = this_event['city']
-                var this_event_state = this_event['state']
-                var location = this_event_city['name'] + ", " +
-                               this_event_state['name']
-              }
-            }
-          }
-        }
-        if('dates' in api_events[api_event]) {
-          if ('start' in api_events[api_event]['dates']) {
-            if ('localDate' in api_events[api_event]['dates']['start']) {
-              var date = api_events[api_event]['dates']['start']['localDate']
-            }
-          }
-        }
-        if ('url' in api_events[api_event]) {
-          var url = api_events[api_event]['url']
-        }
-
-        var email_body = "    - "
-        if (name != "") {
-          email_body += "\"" + name + "\": "
-        }
-        if (location != "") {
-          email_body += location + " "
-        }
-        if (date != "") {
-          email_body += "On " + date + " "
-        }
-        if (url != "") {
-          email_body += " - " + url
-        }
-        events_to_email.push(email_body);
-      }
+    // If there are less events now than before then go to the next event...
+    // There are no new events to report
+    if (api_num_events <= sheet_num_events && sheet_num_events !== undefined) {
+      continue;
     }
+
+    sheet.setNumberOfEvents(k, api_num_events);
+                         " has a new show in " +
+                         event.state + ", " +
+                         event.country);
+    // Loop through the events
+    api_events.forEach(function(api_event) {
+      var name = "";
+      var location = "";
+      var date = "";
+      var url = "";
+      // Get the name of the event
+      try {
+        name = api_event.name;
+      } catch (e) {}
+      // Get the location of the event
+      try {
+        var city = api_event._embedded.venues[0].city.name;
+        var state = api_event._embedded.venues[0].state.name;
+        location = city + ", " + state;
+      } catch (e) {}
+      // Get the date of the event
+      try {
+        date = api_event.dates.start.localDate;
+      } catch (e) {}
+      // Get the url of the event
+      try {
+        url = api_event.url;
+      } catch (e) {}
+
+      var email_body = "    - "
+      if (name != "") {
+        email_body += "\"" + name + "\": "
+      }
+      if (location != "") {
+        email_body += location + " "
+      }
+      if (date != "") {
+        email_body += "On " + date + " "
+      }
+      if (url != "") {
+        email_body += " - " + url
+      }
+      events_to_email.push(email_body);
+    });
   }
   email_alert_for_added_events();
 
   if (debug == true) {
     email_log();
   }
-
 }
