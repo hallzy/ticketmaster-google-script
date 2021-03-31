@@ -1,5 +1,7 @@
 # Ticketmaster Notification
 
+[![paypal](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate?business=QMDXUKQXRT75N&currency_code=CAD)
+
 This is a google script that fetches data from Ticketmaster using their public
 API, and will send you an email when a new event is added to Ticketmaster that
 matches an event name and location that you specify. The reason for this script
